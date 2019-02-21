@@ -41,7 +41,10 @@ export default class Inspector extends React.Component {
     const sortedIdsWithoutRoot = unsortedIds
       .filter(id => id !== "ROOT_QUERY" && highlightedIds.indexOf(id) < 0)
       .sort();
-    const ids = [...highlightedIds, "ROOT_QUERY", ...sortedIdsWithoutRoot];
+    const ids =
+      sortedIdsWithoutRoot.length === 0
+        ? []
+        : [...highlightedIds, "ROOT_QUERY", ...sortedIdsWithoutRoot];
     const selectedId = this.state.selectedId || ids[0];
     this.setState({
       dataWithOptimistic,
@@ -52,8 +55,6 @@ export default class Inspector extends React.Component {
   }
 
   componentDidMount() {
-    //analytics
-    if (ga) ga("send", "pageview", "StoreInspector");
     // this.updateData();
     if (this.props.state.inspector) {
       this.updateDataInStore(this.props.state.inspector);
@@ -256,7 +257,9 @@ class StoreTreeFieldSet extends React.Component {
   }
 
   getStoreObj() {
-    return this.context.inspectorContext.dataWithOptimistic[this.props.dataId];
+    return (
+      this.context.inspectorContext.dataWithOptimistic[this.props.dataId] || {}
+    );
   }
 
   getHighlightObj() {
@@ -440,8 +443,8 @@ class StoreTreeField extends React.Component {
 
     return (
       <div>
-        <span className={className}>{this.props.storeKey}</span>
-        : {this.renderPossibleTypename()}
+        <span className={className}>{this.props.storeKey}</span>:{" "}
+        {this.renderPossibleTypename()}
         <StoreTreeValue
           value={this.props.value}
           highlight={this.props.highlight}

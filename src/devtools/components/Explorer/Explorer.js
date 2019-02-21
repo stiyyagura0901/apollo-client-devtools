@@ -14,7 +14,7 @@ import {
 } from "graphql/utilities";
 import { mergeSchemas } from "graphql-tools";
 import { execute as graphql } from "graphql/execution";
-
+import { StorageContext } from "../../context/StorageContext";
 import { Observable, execute, ApolloLink } from "apollo-link";
 
 import { withBridge } from "../bridge";
@@ -60,7 +60,15 @@ export const createBridgeLink = bridge =>
           const directivesOnly = schemas
             .filter(x => !x.definition)
             .map(x => x.directives);
-          const definitions = schemas.filter(x => !!x.definition);
+          const definitions = schemas
+            .filter(x => !!x.definition)
+            // Filter out @client directives because they can't be parsed by
+            // `buildSchema`. I don't know if any other directives work; if they
+            // don't, this won't fix them. If they do, this won't break them.
+            .filter(
+              definition =>
+                definition.directives !== "directive @client on FIELD",
+            );
           const built = definitions.map(({ definition, directives = "" }) =>
             buildSchema(`${directives} ${definition}`),
           );
@@ -129,6 +137,8 @@ export const createBridgeLink = bridge =>
   );
 
 export class Explorer extends Component {
+  static contextType = StorageContext;
+
   constructor(props, context) {
     super(props, context);
 
@@ -142,7 +152,6 @@ export class Explorer extends Component {
   }
 
   componentDidMount() {
-    if (ga) ga("send", "pageview", "GraphiQL");
     if (this.props.query) {
       if (this.props.automaticallyRunQuery) {
         this.graphiql.handleRunQuery();
@@ -171,6 +180,7 @@ export class Explorer extends Component {
   render() {
     const { noFetch } = this.state;
     const { theme } = this.props;
+
     const graphiql = (
       <GraphiQL
         fetcher={this.fetcher}
@@ -182,6 +192,7 @@ export class Explorer extends Component {
         onEditVariables={() => {
           this.clearDefaultQueryState();
         }}
+        storage={this.context.storage}
         variables={this.state.variables}
         ref={r => {
           this.graphiql = r;
